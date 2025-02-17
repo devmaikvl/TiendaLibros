@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Libros y Usuarios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📚 Crear Libro</h2>
+        <form id="libroForm" class="space-y-4">
+            <input type="text" id="titulo" placeholder="Título" class="w-full p-2 border rounded" required>
+            <input type="text" id="autor" placeholder="Autor" class="w-full p-2 border rounded" required>
+            <input type="text" id="genero" placeholder="Género" class="w-full p-2 border rounded">
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Crear Libro</button>
+        </form>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📖 Lista de Libros</h2>
+        <button onclick="listarLibros()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mb-4">Cargar Libros</button>
+        <ul id="listaLibros" class="space-y-2"></ul>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">👤 Crear Usuario</h2>
+        <form id="usuarioForm" class="space-y-4">
+            <input type="text" id="nombre" placeholder="Nombre" class="w-full p-2 border rounded" required>
+            <input type="email" id="email" placeholder="Email" class="w-full p-2 border rounded" required>
+            <input type="text" id="telefono" placeholder="Teléfono" class="w-full p-2 border rounded">
+            <input type="text" id="tipodeusuario" placeholder="Tipo de Usuario" class="w-full p-2 border rounded" required>
+            <input type="password" id="contrasena" placeholder="Contraseña" class="w-full p-2 border rounded" required>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Crear Usuario</button>
+        </form>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📋 Lista de Usuarios</h2>
+        <button onclick="listarUsuarios()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mb-4">Cargar Usuarios</button>
+        <ul id="listaUsuarios" class="space-y-2"></ul>
+    </div>
+
+    <script>
+        const API_URL_LIBROS = "http://localhost:8080/libro";
+        const API_URL_USUARIOS = "http://localhost:8080/usuario";
+
+        document.getElementById("libroForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const titulo = document.getElementById("titulo").value;
+            const autor = document.getElementById("autor").value;
+            const genero = document.getElementById("genero").value;
+
+            try {
+                const response = await fetch(API_URL_LIBROS, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ titulo, autor, genero })
+                });
+
+                if (response.ok) {
+                    alert("📖 Libro creado con éxito");
+                    listarLibros();
+                } else {
+                    alert("❌ Error al crear el libro");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        async function listarLibros() {
+            try {
+                const response = await fetch(API_URL_LIBROS);
+                const libros = await response.json();
+                const listaLibros = document.getElementById("listaLibros");
+                listaLibros.innerHTML = "";
+
+                libros.forEach(libro => {
+                    const item = document.createElement("li");
+                    item.classList.add("bg-gray-200", "p-3", "rounded", "flex", "justify-between", "items-center");
+
+                    const texto = document.createElement("span");
+                    texto.textContent = `📚 ${libro.titulo} - ${libro.autor} (ID: ${libro.id})`;
+
+                    const botonEliminar = document.createElement("button");
+                    botonEliminar.textContent = "🗑️";
+                    botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded", "hover:bg-red-700");
+                    botonEliminar.onclick = () => eliminarLibro(libro.id);
+
+                    item.appendChild(texto);
+                    item.appendChild(botonEliminar);
+                    listaLibros.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Error al obtener los libros:", error);
+            }
+        }
+
+        async function eliminarLibro(id) {
+            if (!confirm("¿Eliminar este libro?")) return;
+
+            try {
+                const response = await fetch(`${API_URL_LIBROS}/${id}`, { method: "DELETE" });
+
+                if (response.ok) {
+                    alert("🗑️ Libro eliminado");
+                    listarLibros();
+                } else {
+                    alert("❌ Error al eliminar");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        document.getElementById("usuarioForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const nombre = document.getElementById("nombre").value;
+            const email = document.getElementById("email").value;
+            const telefono = document.getElementById("telefono").value;
+            const tipodeusuario = document.getElementById("tipodeusuario").value;
+            const contrasena = document.getElementById("contrasena").value;
+
+            try {
+                const response = await fetch(API_URL_USUARIOS, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nombre, email, telefono, tipodeusuario, contrasena })
+                });
+
+                if (response.ok) {
+                    alert("👤 Usuario creado");
+                    listarUsuarios();
+                } else {
+                    alert("❌ Error al crear el usuario");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        async function listarUsuarios() {
+            try {
+                const response = await fetch(API_URL_USUARIOS);
+                const usuarios = await response.json();
+                const listaUsuarios = document.getElementById("listaUsuarios");
+                listaUsuarios.innerHTML = "";
+
+                usuarios.forEach(usuario => {
+                    const item = document.createElement("li");
+                    item.classList.add("bg-gray-200", "p-3", "rounded", "flex", "justify-between", "items-center");
+
+                    const texto = document.createElement("span");
+                    texto.textContent = `👤 ${usuario.nombre} - ${usuario.email} (ID: ${usuario.id})`;
+
+                    const botonEliminar = document.createElement("button");
+                    botonEliminar.textContent = "🗑️";
+                    botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded", "hover:bg-red-700");
+                    botonEliminar.onclick = () => eliminarUsuario(usuario.id);
+
+                    item.appendChild(texto);
+                    item.appendChild(botonEliminar);
+                    listaUsuarios.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Error al obtener usuarios:", error);
+            }
+        }
+
+        async function eliminarUsuario(id) {
+            if (!confirm("¿Eliminar este usuario?")) return;
+
+            try {
+                const response = await fetch(`${API_URL_USUARIOS}/${id}`, { method: "DELETE" });
+
+                if (response.ok) {
+                    alert("🗑️ Usuario eliminado");
+                    listarUsuarios();
+                } else {
+                    alert("❌ Error al eliminar");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+    </script>
+</body>
+</html>
