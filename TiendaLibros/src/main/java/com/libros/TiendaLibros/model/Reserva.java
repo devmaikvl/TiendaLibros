@@ -1,9 +1,16 @@
 package com.libros.TiendaLibros.model;
 
-import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
+@Getter
+@Setter
 @Entity
+@Table(name = "reserva")
 public class Reserva {
 
     @Id
@@ -12,55 +19,29 @@ public class Reserva {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
+    @JsonIgnoreProperties({"reservas", "contrasena"})
     private Usuario usuario;
 
     @ManyToOne
+    @JsonIgnoreProperties("reservas")
     @JoinColumn(name = "libro_id", nullable = false)
     private Libro libro;
 
-    @Column(nullable = false)
     private LocalDate fechaReserva;
 
     public Reserva() {
     }
 
-    public Reserva(Usuario usuario, Libro libro, LocalDate fechaReserva) {
+    public Reserva(Usuario usuario, Libro libro) {
         this.usuario = usuario;
         this.libro = libro;
-        this.fechaReserva = fechaReserva;
     }
 
-    // Getters y setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Usuario getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
-
-    public Libro getLibro() {
-        return libro;
-    }
-
-    public void setLibro(Libro libro) {
-        this.libro = libro;
-    }
-
-    public LocalDate getFechaReserva() {
-        return fechaReserva;
-    }
-
-    public void setFechaReserva(LocalDate fechaReserva) {
-        this.fechaReserva = fechaReserva;
+    // Asignar la fecha automáticamente antes de persistir la entidad
+    @PrePersist
+    public void prePersist() {
+        if (fechaReserva == null) {
+            this.fechaReserva = LocalDate.now();  // Asigna la fecha actual si no se proporciona
+        }
     }
 }

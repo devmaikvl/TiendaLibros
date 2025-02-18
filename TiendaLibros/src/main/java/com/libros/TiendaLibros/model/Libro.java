@@ -1,11 +1,14 @@
 package com.libros.TiendaLibros.model;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Column;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.List;
+
+
+@Getter
+@Setter
 @Entity
 public class Libro {
 
@@ -29,38 +32,7 @@ public class Libro {
         this.autor = autor;
         this.genero = genero;
     }
+    @OneToMany(mappedBy = "libro", cascade = CascadeType.ALL)
+    private List<Reserva> reservas;
 
-    // Getters y setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTitulo() {
-        return titulo;
-    }
-
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
-
-    public String getAutor() {
-        return autor;
-    }
-
-    public void setAutor(String autor) {
-        this.autor = autor;
-    }
-
-    public String getGenero() {
-        return genero;
-    }
-
-    public void setGenero(String genero) {
-        this.genero = genero;
-    }
 }
