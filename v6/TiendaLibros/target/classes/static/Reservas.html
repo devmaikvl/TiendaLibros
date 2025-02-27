@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-10">
+
+    <div class="max-w-3xl mx-auto p-5 bg-gray-800 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📅 Crear Reserva</h2>
+        <form id="reservaForm" class="space-y-4">
+            <select id="usuario" class="w-full p-2 border rounded bg-gray-700 text-white" required></select>
+            <div class="flex space-x-2">
+                <input type="text" id="buscarLibro" class="w-full p-2 border rounded bg-gray-700 text-white" placeholder="Buscar libro por nombre, autor o género" />
+            </div>
+            <div id="librosBusquedaResult" class="space-y-2"></div>
+            <input type="hidden" id="libroId" name="libroId" required />
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Reservar</button>
+        </form>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-gray-800 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📋 Lista de Reservas</h2>
+        <button onclick="listarReservas()" id="cargarReservasButton" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mb-4">Cargar Reservas</button>
+        <ul id="listaReservas" class="space-y-2 hidden"></ul>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-gray-800 shadow-lg rounded-lg">
+        <!-- Botón de Cerrar Sesión -->
+        <button onclick="cerrarSesion()" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Cerrar Sesión</button>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('jwtToken'); 
+        const API_URL_RESERVAS = "http://localhost:8080/reserva";
+        const API_URL_USUARIOS = "http://localhost:8080/usuario";
+        const API_URL_LIBROS = "http://localhost:8080/libro";
+        const API_URL_BUSCAR_LIBROS = "http://localhost:8080/libro/buscar";
+
+        async function cargarUsuariosYLibros() {
+            try {
+                const usuariosResponse = await fetch(API_URL_USUARIOS, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (!usuariosResponse.ok) throw new Error("No autorizado o error en la carga de usuarios");
+
+                const usuarios = await usuariosResponse.json();
+                const usuarioSelect = document.getElementById("usuario");
+                usuarioSelect.innerHTML = usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join("");
+            } catch (error) {
+                console.error("Error al cargar usuarios:", error);
+            }
+        }
+
+        document.getElementById("buscarLibro").addEventListener("input", async function() {
+            const query = this.value;
+            const librosDiv = document.getElementById("librosBusquedaResult");
+            librosDiv.innerHTML = '';
+
+            if (query.length > 2) {
+                try {
+                    const response = await fetch(`${API_URL_BUSCAR_LIBROS}?query=${query}`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) throw new Error("Error al buscar libros");
+
+                    const libros = await response.json();
+                    const resultadosLimitados = libros.slice(0, 10);
+
+                    if (resultadosLimitados.length === 0) {
+                        librosDiv.innerHTML = "<p class='text-red-500'>No se encontraron libros.</p>";
+                    } else {
+                        resultadosLimitados.forEach(libro => {
+                            const divLibro = document.createElement("div");
+                            divLibro.classList.add("border", "p-2", "rounded", "cursor-pointer", "bg-gray-700", "text-white");
+                            divLibro.innerHTML = `${libro.titulo} - ${libro.autor} (${libro.genero})`;
+                            divLibro.onclick = () => selectLibro(libro.id, libro.titulo, libro.autor, libro.genero);
+                            librosDiv.appendChild(divLibro);
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error al buscar libros:", error);
+                }
+            }
+        });
+
+        function selectLibro(libroId, titulo, autor, genero) {
+            document.getElementById("libroId").value = libroId;
+            document.getElementById("buscarLibro").value = `${titulo} - ${autor} (${genero})`;
+            document.getElementById("librosBusquedaResult").innerHTML = ''; 
+        }
+
+        document.getElementById("reservaForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const usuarioId = document.getElementById("usuario").value;
+            const libroId = document.getElementById("libroId").value;
+            const reserva = { usuario: { id: usuarioId }, libro: { id: libroId } };
+
+            try {
+                const response = await fetch(API_URL_RESERVAS, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(reserva)
+                });
+
+                if (response.ok) {
+                    alert("✅ Reserva creada con éxito");
+                    document.getElementById("reservaForm").reset();
+                    listarReservas();
+                } else {
+                    throw new Error("Error al crear la reserva");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        async function listarReservas() {
+            const listaReservas = document.getElementById("listaReservas");
+
+            listaReservas.classList.toggle("hidden");
+
+            if (!listaReservas.classList.contains("hidden")) {
+                try {
+                    const response = await fetch(API_URL_RESERVAS, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) throw new Error("Error al obtener reservas");
+
+                    const reservas = await response.json();
+                    listaReservas.innerHTML = "";
+
+                    reservas.forEach(reserva => {
+                        const item = document.createElement("li");
+                        item.classList.add("bg-gray-700", "p-3", "rounded", "flex", "justify-between", "items-center");
+                        const texto = document.createElement("span");
+                        texto.textContent = `📚 ${reserva.libro.titulo} reservado por ${reserva.usuario.nombre} el ${reserva.fechaReserva}`;
+                        const botonEliminar = document.createElement("button");
+                        botonEliminar.textContent = "🗑️";
+                        botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded");
+                        botonEliminar.onclick = () => eliminarReserva(reserva.id);
+                        item.appendChild(texto);
+                        item.appendChild(botonEliminar);
+                        listaReservas.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error("Error al obtener reservas:", error);
+                }
+            }
+        }
+
+        async function eliminarReserva(id) {
+            if (!confirm("¿Eliminar esta reserva?")) return;
+            try {
+                await fetch(`${API_URL_RESERVAS}/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                alert("🗑️ Reserva eliminada");
+                listarReservas();
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem("jwtToken");
+            window.location.href = "logi2n.html"; // Redirigir a la página de inicio de sesión
+        }
+
+        cargarUsuariosYLibros();
+    </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Libros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-800 text-gray-100 p-10">
+    <div class="max-w-3xl mx-auto p-5 bg-gray-700 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📚 Crear Libro</h2>
+        <form id="libroForm" class="space-y-4">
+            <input type="hidden" id="libroId">
+            <input type="text" id="titulo" placeholder="Título" class="w-full p-2 border rounded bg-gray-600 text-gray-200" required>
+            <input type="text" id="autor" placeholder="Autor" class="w-full p-2 border rounded bg-gray-600 text-gray-200" required>
+            <input type="text" id="genero" placeholder="Género" class="w-full p-2 border rounded bg-gray-600 text-gray-200">
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Guardar Libro</button>
+        </form>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-gray-700 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📖 Buscar Libro</h2>
+        <input type="text" id="buscarLibro" placeholder="Buscar por título o autor..." class="w-full p-2 border rounded bg-gray-600 text-gray-200 mb-4" oninput="buscarLibro()">
+        <button onclick="buscarLibro()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 mb-4">Buscar</button>
+        <ul id="resultadosBusqueda" class="space-y-2 mb-4"></ul>
+
+        <h2 class="text-2xl font-bold mb-4 text-center">📖 Lista de Libros</h2>
+        <button onclick="listarLibros()" id="cargarLibrosButton" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mb-4">Cargar Libros</button>
+        <ul id="listaLibros" class="space-y-2 hidden"></ul>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-gray-800 shadow-lg rounded-lg">
+        <!-- Botón de Cerrar Sesión -->
+        <button onclick="cerrarSesion()" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Cerrar Sesión</button>
+    </div>
+
+    <script>
+        const API_URL_LIBROS = "http://localhost:8080/libro";
+        const API_URL_BUSCAR_LIBROS = "http://localhost:8080/libro/buscar";
+
+        // Obtener el token del almacenamiento local (asegúrate de que el token esté almacenado previamente)
+        const token = localStorage.getItem("jwtToken");
+
+        // Función para agregar el token a las cabeceras de las peticiones
+        function getHeaders() {
+            return {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            };
+        }
+
+        document.getElementById("libroForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const id = document.getElementById("libroId").value;
+            const titulo = document.getElementById("titulo").value;
+            const autor = document.getElementById("autor").value;
+            const genero = document.getElementById("genero").value;
+
+            const libro = { titulo, autor, genero };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`${API_URL_LIBROS}/${id}`, {
+                        method: "PUT",
+                        headers: getHeaders(),
+                        body: JSON.stringify(libro)
+                    });
+                    alert("✏️ Libro actualizado con éxito");
+                } else {
+                    response = await fetch(API_URL_LIBROS, {
+                        method: "POST",
+                        headers: getHeaders(),
+                        body: JSON.stringify(libro)
+                    });
+                    alert("📖 Libro creado con éxito");
+                }
+
+                if (response.ok) {
+                    document.getElementById("libroForm").reset();
+                    document.getElementById("libroId").value = "";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        async function listarLibros() {
+            const listaLibros = document.getElementById("listaLibros");
+            const cargarLibrosButton = document.getElementById("cargarLibrosButton");
+
+            // Alternar la visibilidad de la lista de libros
+            listaLibros.classList.toggle("hidden");
+
+            if (!listaLibros.classList.contains("hidden")) {
+                try {
+                    const response = await fetch(API_URL_LIBROS, {
+                        method: "GET",
+                        headers: getHeaders()
+                    });
+                    const libros = await response.json();
+                    listaLibros.innerHTML = "";
+
+                    libros.forEach(libro => {
+                        const item = document.createElement("li");
+                        item.classList.add("bg-gray-600", "p-3", "rounded", "flex", "justify-between", "items-center");
+
+                        const texto = document.createElement("span");
+                        texto.textContent = `📚 ${libro.titulo} - ${libro.autor}`;
+
+                        const botonEditar = document.createElement("button");
+                        botonEditar.textContent = "📝";
+                        botonEditar.classList.add("bg-yellow-500", "text-white", "px-2", "py-1", "rounded", "mr-2");
+                        botonEditar.onclick = () => cargarLibroParaEditar(libro);
+
+                        const botonEliminar = document.createElement("button");
+                        botonEliminar.textContent = "🗑️";
+                        botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded");
+                        botonEliminar.onclick = () => eliminarLibro(libro.id);
+
+                        const botones = document.createElement("div");
+                        botones.appendChild(botonEditar);
+                        botones.appendChild(botonEliminar);
+
+                        item.appendChild(texto);
+                        item.appendChild(botones);
+                        listaLibros.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error("Error al obtener los libros:", error);
+                }
+            }
+        }
+
+        async function buscarLibro() {
+            const query = document.getElementById("buscarLibro").value;
+            const resultadosBusqueda = document.getElementById("resultadosBusqueda");
+
+            // Si el campo de búsqueda está vacío, ocultar los resultados
+            if (query === "") {
+                resultadosBusqueda.innerHTML = "";
+                return;
+            }
+
+            if (query.length > 2) {
+                try {
+                    const response = await fetch(`${API_URL_BUSCAR_LIBROS}?query=${query}`, {
+                        method: "GET",
+                        headers: getHeaders()
+                    });
+                    const libros = await response.json();
+                    resultadosBusqueda.innerHTML = "";
+
+                    libros.forEach(libro => {
+                        const item = document.createElement("li");
+                        item.classList.add("bg-gray-600", "p-3", "rounded", "flex", "justify-between", "items-center");
+                        item.textContent = `${libro.titulo} - ${libro.autor}`;
+
+                        // Botón editar
+                        const botonEditar = document.createElement("button");
+                        botonEditar.textContent = "📝";
+                        botonEditar.classList.add("bg-yellow-500", "text-white", "px-2", "py-1", "rounded", "mr-2");
+                        botonEditar.onclick = () => cargarLibroParaEditar(libro);
+
+                        // Botón eliminar
+                        const botonEliminar = document.createElement("button");
+                        botonEliminar.textContent = "🗑️";
+                        botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded");
+                        botonEliminar.onclick = () => eliminarLibro(libro.id);
+
+                        // Añadir botones al item
+                        const botones = document.createElement("div");
+                        botones.appendChild(botonEditar);
+                        botones.appendChild(botonEliminar);
+
+                        item.appendChild(botones);
+                        resultadosBusqueda.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error("Error al buscar libros:", error);
+                }
+            }
+        }
+
+        function cargarLibroParaEditar(libro) {
+            document.getElementById("libroId").value = libro.id;
+            document.getElementById("titulo").value = libro.titulo;
+            document.getElementById("autor").value = libro.autor;
+            document.getElementById("genero").value = libro.genero;
+        }
+
+        async function eliminarLibro(id) {
+            if (!confirm("¿Eliminar este libro?")) return;
+            try {
+                await fetch(`${API_URL_LIBROS}/${id}`, {
+                    method: "DELETE",
+                    headers: getHeaders()
+                });
+                alert("🗑️ Libro eliminado");
+                listarLibros();
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function cerrarSesion() {
+            // Eliminar el token de localStorage
+            localStorage.removeItem('jwtToken');
+            // Redirigir al usuario a la página de inicio de sesión
+            window.location.href = 'login2.html'; // Cambia esto si el nombre de tu página de login es diferente
+        }
+    </script>
+</body>
+</html>

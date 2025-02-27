@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 p-10">
+    <div class="max-w-3xl mx-auto p-5 bg-gray-800 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">👤 Crear Usuario</h2>
+        <form id="usuarioForm" class="space-y-4">
+            <input type="hidden" id="usuarioId">
+            <input type="text" id="nombre" placeholder="Nombre" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+            <input type="text" id="username" placeholder="Nombre de usuario" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+            <input type="tel" id="telefono" placeholder="Teléfono" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100">
+            <input type="password" id="password" placeholder="Contraseña" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+            
+            <select id="role" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+                <option value="USER">Usuario</option>
+                <option value="ADMIN">Administrador</option>
+            </select>
+            
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Guardar Usuario</button>
+        </form>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-10 p-5 bg-gray-800 shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">📋 Lista de Usuarios</h2>
+        <input type="text" id="buscarNombre" placeholder="Buscar usuario por nombre" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100 mb-4">
+        <button onclick="buscarUsuarios()" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 mb-4">🔍 Buscar Usuario</button>
+        <button onclick="toggleUsuarios()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mb-4">Cargar Usuarios</button>
+        <ul id="listaUsuarios" class="space-y-2 hidden"></ul>
+    </div>
+
+    <!-- Botón de Cerrar sesión -->
+    <div class="max-w-3xl mx-auto mt-10">
+        <button onclick="cerrarSesion()" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Cerrar sesión</button>
+    </div>
+
+    <script>
+        const API_URL_USUARIOS = "http://localhost:8080/usuario";
+        
+        // Obtén el token JWT desde el almacenamiento local (ajústalo si lo tienes en otro lugar)
+        const token = localStorage.getItem("jwtToken");
+
+        // Función para agregar el token JWT en los encabezados
+        function obtenerHeaders() {
+            return {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            };
+        }
+
+        document.getElementById("usuarioForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const id = document.getElementById("usuarioId").value;
+            const nombre = document.getElementById("nombre").value;
+            const username = document.getElementById("username").value;
+            const telefono = document.getElementById("telefono").value;
+            const password = document.getElementById("password").value;  // Asegúrate de usar 'password' en vez de 'contrasena'
+            const role = document.getElementById("role").value;
+
+            // Verifica los valores antes de enviar
+            console.log({ nombre, username, telefono, password, role });
+
+            const usuario = { nombre, username, telefono, password, role };
+
+            try {
+                let response;
+                if (id) {
+                    // Actualizamos el usuario
+                    response = await fetch(`${API_URL_USUARIOS}/${id}`, {
+                        method: "PUT",
+                        headers: obtenerHeaders(),
+                        body: JSON.stringify(usuario)
+                    });
+                    alert("✏️ Usuario actualizado con éxito");
+                } else {
+                    // Creamos un nuevo usuario
+                    response = await fetch(API_URL_USUARIOS, {
+                        method: "POST",
+                        headers: obtenerHeaders(),
+                        body: JSON.stringify(usuario)
+                    });
+                    alert("👤 Usuario creado con éxito");
+                }
+
+                if (response.ok) {
+                    document.getElementById("usuarioForm").reset();
+                    document.getElementById("usuarioId").value = "";
+
+                    // Después de crear o actualizar, se actualiza automáticamente la lista
+                    listarUsuarios();
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+
+        async function listarUsuarios() {
+            try {
+                const response = await fetch(API_URL_USUARIOS, {
+                    headers: obtenerHeaders() // Agregar el JWT en los encabezados
+                });
+                const usuarios = await response.json();
+                mostrarUsuarios(usuarios);
+            } catch (error) {
+                console.error("Error al cargar usuarios:", error);
+            }
+        }
+
+        async function buscarUsuarios() {
+            const nombre = document.getElementById("buscarNombre").value.trim();
+            if (!nombre) {
+                alert("Por favor, ingresa un nombre para buscar.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL_USUARIOS}/buscar?nombre=${encodeURIComponent(nombre)}`, {
+                    headers: obtenerHeaders() // Agregar el JWT en los encabezados
+                });
+                const usuarios = await response.json();
+                mostrarUsuarios(usuarios);
+
+                // Hacer visible la lista después de la búsqueda
+                document.getElementById("listaUsuarios").classList.remove("hidden");
+            } catch (error) {
+                console.error("Error al buscar usuarios:", error);
+            }
+        }
+
+        function mostrarUsuarios(usuarios) {
+            const listaUsuarios = document.getElementById("listaUsuarios");
+            listaUsuarios.innerHTML = "";
+            
+            if (usuarios.length === 0) {
+                listaUsuarios.innerHTML = "<p class='text-center text-gray-500'>No se encontraron usuarios.</p>";
+                return;
+            }
+
+            usuarios.forEach(usuario => {
+                const item = document.createElement("li");
+                item.classList.add("bg-gray-700", "p-3", "rounded", "flex", "justify-between", "items-center");
+
+                const texto = document.createElement("span");
+                texto.classList.add("text-gray-100");
+                texto.textContent = `👤 ${usuario.nombre} - ${usuario.email} (${usuario.role})`;
+
+                const botonEditar = document.createElement("button");
+                botonEditar.textContent = "📝";
+                botonEditar.classList.add("bg-yellow-500", "text-white", "px-2", "py-1", "rounded", "mr-2");
+                botonEditar.onclick = () => cargarUsuarioParaEditar(usuario);
+
+                const botonEliminar = document.createElement("button");
+                botonEliminar.textContent = "🗑️";
+                botonEliminar.classList.add("bg-red-600", "text-white", "px-2", "py-1", "rounded");
+                botonEliminar.onclick = () => eliminarUsuario(usuario.id);
+
+                const botones = document.createElement("div");
+                botones.appendChild(botonEditar);
+                botones.appendChild(botonEliminar);
+
+                item.appendChild(texto);
+                item.appendChild(botones);
+                listaUsuarios.appendChild(item);
+            });
+        }
+
+        function cargarUsuarioParaEditar(usuario) {
+            document.getElementById("usuarioId").value = usuario.id;
+            document.getElementById("nombre").value = usuario.nombre;
+            document.getElementById("username").value = usuario.username;
+            document.getElementById("telefono").value = usuario.telefono;
+            document.getElementById("password").value = usuario.password;  // Muestra la contraseña para edición
+            document.getElementById("role").value = usuario.role;  // Establece el rol en el select
+        }
+
+        async function eliminarUsuario(id) {
+            if (!confirm("¿Eliminar este usuario?")) return;
+            try {
+                await fetch(`${API_URL_USUARIOS}/${id}`, { 
+                    method: "DELETE",
+                    headers: obtenerHeaders() // Agregar el JWT en los encabezados
+                });
+                alert("🗑️ Usuario eliminado");
+                
+                // Actualiza la lista de usuarios después de eliminar
+                listarUsuarios();
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function toggleUsuarios() {
+            const listaUsuarios = document.getElementById("listaUsuarios");
+            if (listaUsuarios.classList.contains("hidden")) {
+                listaUsuarios.classList.remove("hidden");
+                listarUsuarios();
+            } else {
+                listaUsuarios.classList.add("hidden");
+            }
+        }
+
+        // Función para cerrar sesión
+        function cerrarSesion() {
+            localStorage.removeItem("jwtToken");  // Elimina el token de localStorage
+            window.location.href = "login2.html";  // Redirige al usuario a la página de login
+        }
+    </script>
+</body>
+</html>
