@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-100 flex flex-col min-h-screen" style="background-image: url('img/libro3.jpg');">
+    <div class="flex-grow flex items-center justify-center">
+        <div class="max-w-md w-full bg-gray-800 p-8 rounded-lg shadow-lg text-center">
+            <h2 class="text-2xl font-bold mb-6">⚙️ Panel de Administración</h2>
+            <div class="space-y-4">
+                <a href="Libros.html" class="w-full block bg-blue-600 text-white py-2 rounded hover:bg-blue-700">📚 Gestión de Libros</a>
+                <a href="Usuarios.html" class="w-full block bg-green-600 text-white py-2 rounded hover:bg-green-700">👤 Gestión de Usuarios</a>
+                <a href="Reservas.html" class="w-full block bg-yellow-600 text-white py-2 rounded hover:bg-yellow-700">📌 Gestión de Reservas</a>
+            </div>
+            <!-- Botón de Cerrar sesión -->
+            <button onclick="cerrarSesion()" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 mt-4">
+                🚪 Cerrar sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-10 text-center text-white-500">
+        <p>&copy; 2025 Universidad Internacional San Isidro Labrador</p>
+        <p>Desarrollado por: Michel Vargas Lira y Zuñiga González Jeudy Eduardo</p>
+    </footer>
+
+    <script>
+        // Función para cerrar sesión y redirigir al usuario
+        function cerrarSesion() {
+            // Eliminar el token de localStorage
+            localStorage.removeItem('jwtToken');
+            // Redirigir al usuario a la página de inicio de sesión
+            window.location.href = 'login2.html'; // Cambia esto si el nombre de tu página de login es diferente
+        }
+    </script>
+</body>
+</html>

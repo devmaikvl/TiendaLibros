@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <!-- Importamos Tailwind CSS desde CDN para estilos rápidos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 flex flex-col min-h-screen justify-between"style="background-image: url('img/libro3.jpg');">
+    
+    <!-- Contenedor principal para centrar el formulario de login -->
+    <div class="flex-grow flex items-center justify-center">
+        <div class="max-w-md w-full bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-6">🔐 Iniciar Sesión</h2>
+            <form id="loginForm" class="space-y-4">
+                <!-- Campo para ingresar el usuario -->
+                <input type="text" id="username" placeholder="Usuario" 
+                    class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+                
+                <!-- Campo para ingresar la contraseña -->
+                <input type="password" id="password" placeholder="Contraseña" 
+                    class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-gray-100" required>
+                
+                <!-- Botón para iniciar sesión -->
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                    Iniciar Sesión
+                </button>
+            </form>
+
+            <!-- Mensaje de error en caso de credenciales incorrectas -->
+            <p id="mensaje" class="text-red-500 text-center mt-4"></p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-10 text-center text-white-500">
+        <p>&copy; 2025 Universidad Internacional San Isidro Labrador</p>
+        <p>Desarrollado por: Michel Vargas Lira y Zuñiga González Jeudy Eduardo</p>
+    </footer>
+
+    <script>
+        // Capturamos el evento de envío del formulario
+        document.getElementById("loginForm").addEventListener("submit", async function(event) {
+            event.preventDefault(); // Evitamos que la página se recargue
+            
+            // Obtenemos los valores de los campos
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            
+            // Verificamos que los campos no estén vacíos
+            if (!username || !password) {
+                document.getElementById("mensaje").innerText = "Por favor, ingrese todos los campos.";
+                return;
+            }
+
+            // Enviamos los datos al backend
+            const response = await fetch("http://localhost:8080/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }) // Convertimos los datos a JSON
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem("jwtToken", data.token); // Guardamos el token en localStorage
+
+                try {
+                    // Decodificamos el token para obtener el rol del usuario
+                    const decoded = JSON.parse(atob(data.token.split('.')[1]));
+                    const role = decoded.role;
+
+                    // Redirigimos según el rol
+                    if (role === 'ADMIN') {
+                        window.location.href = "admin.html";
+                    } else if (role === 'USER') {
+                        window.location.href = "dashboard.html";
+                    }
+                } catch (error) {
+                    console.error("Error al decodificar el token:", error);
+                }
+            } else {
+                // Si las credenciales son incorrectas, mostramos un mensaje de error
+                document.getElementById("mensaje").innerText = "Credenciales incorrectas";
+            }
+        });
+    </script>
+</body>
+</html>
